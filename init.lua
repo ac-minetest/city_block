@@ -120,24 +120,50 @@ end
 
 
 -- rnd: now only players who kill others by punching go to jail, no more fail jailings
+
+city_block.attacker = {};city_block.attack = {};
 minetest.register_on_punchplayer(
 		function(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
+			
+			local pname = player:get_player_name();	local name = hitter:get_player_name();if not pname or not name then return end
+			local t = minetest.get_gametime() or 0;
+			city_block.attacker[pname] = name;city_block.attack[pname]=t;
 			local hp = player:get_hp();
-			if hp-damage<0 then -- player will die
+			
+			if hp-damage<=0 then -- player will die
+				
 				local pos = player:getpos()
-				if city_block:in_city(pos) and not(pos.x>-25 and pos.x<25 and pos.y>-5 and pos.y<25 and pos.z>-25 and pos.z<25) then
-					local name = hitter:get_player_name();
-					local pname = player:get_player_name();
-					if not name or not pname then return end
-					hitter:setpos( {x=0, y=-2, z=0} )
-					minetest.chat_send_all("Player "..name.." sent to jail as suspect for killing " .. pname .."  in town")
-					minetest.log("action", "Player "..name.." warned for killing in town")
+				
+				if city_block:in_city(pos) then
+					local t0 = city_block.attack[name] or t;t0=t-t0;
+					if not city_block.attacker[name] then city_block.attacker[name] = "" end
+					--minetest.chat_send_all(" killers attacker ".. city_block.attacker[name] .. " attacked before " .. t0)
+					if city_block.attacker[name]==pname and t0<10 then -- justified killing 10 seconds after provocation
+						return 
+					else -- go to jail spawn killer, drop items for punishment				
+						local hitter_inv = hitter:get_inventory();pos.y = pos.y+1
+				
+						-- drop items instead of delete
+						for i=1,hitter_inv:get_size("main") do
+							minetest.add_item(pos, hitter_inv:get_stack("main", i))
+						end
+						for i=1,hitter_inv:get_size("craft") do
+							minetest.add_item(pos, hitter_inv:get_stack("craft", i))
+						end
+						-- empty lists main and craft
+						hitter_inv:set_list("main", {})
+						hitter_inv:set_list("craft", {})
+						
+						hitter:setpos( {x=0, y=-2, z=0} )
+						minetest.chat_send_all("Player "..name.." sent to jail for killing " .. pname .." without reason in town")
+						minetest.log("action", "Player "..name.." warned for killing in town")
+					end
 				end
+			end
 				
 				
 			
 			end
-		end
 )
 
 
