@@ -126,6 +126,7 @@ minetest.register_on_punchplayer(
 		function(player, hitter, time_from_last_punch, tool_capabilities, dir, damage)
 			
 			local pname = player:get_player_name();	local name = hitter:get_player_name();if not pname or not name then return end
+			if name=="" or pname=="" then return end -- no mob killers/victims
 			local t = minetest.get_gametime() or 0;
 			city_block.attacker[pname] = name;city_block.attack[pname]=t;
 			local hp = player:get_hp();
@@ -142,18 +143,18 @@ minetest.register_on_punchplayer(
 						return 
 					else -- go to jail spawn killer, drop items for punishment				
 						local hitter_inv = hitter:get_inventory();pos.y = pos.y+1
-				
-						-- drop items instead of delete
-						for i=1,hitter_inv:get_size("main") do
-							minetest.add_item(pos, hitter_inv:get_stack("main", i))
+						if hittern_inv then
+							-- drop items instead of delete
+							for i=1,hitter_inv:get_size("main") do
+								minetest.add_item(pos, hitter_inv:get_stack("main", i))
+							end
+							for i=1,hitter_inv:get_size("craft") do
+								minetest.add_item(pos, hitter_inv:get_stack("craft", i))
+							end
+							-- empty lists main and craft
+							hitter_inv:set_list("main", {})
+							hitter_inv:set_list("craft", {})
 						end
-						for i=1,hitter_inv:get_size("craft") do
-							minetest.add_item(pos, hitter_inv:get_stack("craft", i))
-						end
-						-- empty lists main and craft
-						hitter_inv:set_list("main", {})
-						hitter_inv:set_list("craft", {})
-						
 						hitter:setpos( {x=0, y=-2, z=0} )
 						minetest.chat_send_all("Player "..name.." sent to jail for killing " .. pname .." without reason in town")
 						minetest.log("action", "Player "..name.." warned for killing in town")
